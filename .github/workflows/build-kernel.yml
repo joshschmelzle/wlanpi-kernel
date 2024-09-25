@@ -42,26 +42,16 @@ jobs:
           name: wlanpi-kernel-${{ steps.build-kernel.outputs.package-version }}
           path: ${{ steps.build-kernel.outputs.deb-package }}
 
-      - name: Upload bullseye package to debian/bullseye on packagecloud
-        if: ${{ github.event.ref == format('refs/heads/{0}', github.event.repository.default_branch) }} && matrix.distro == 'bullseye'
+      - name: Upload package to debian/${{ matrix.distro }} on packagecloud
+        if: ${{ github.event.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
         uses: danielmundi/upload-packagecloud@main
         with:
           package-name: ${{ steps.build-kernel.outputs.deb-package }}
           packagecloud-username: wlanpi
           packagecloud-repo: dev
-          packagecloud-distrib: debian/bullseye
+          packagecloud-distrib: debian/${{ matrix.distro }}
           packagecloud-token: ${{ secrets.PACKAGECLOUD_TOKEN }}
           
-      - name: Upload bookworm package to debian/bookworm on packagecloud
-        if: ${{ github.event.ref == format('refs/heads/{0}', github.event.repository.default_branch) }} && matrix.distro == 'bookworm'
-        uses: danielmundi/upload-packagecloud@main
-        with:
-          package-name: ${{ steps.build-kernel.outputs.deb-package }}
-          packagecloud-username: wlanpi
-          packagecloud-repo: dev
-          packagecloud-distrib: debian/bookworm
-          packagecloud-token: ${{ secrets.PACKAGECLOUD_TOKEN }}
-
   slack-workflow-status:
     if: always()
     name: Post Workflow Status to Slack
