@@ -8,17 +8,17 @@ VALID_ARGS=$?
 
 SCRIPT_PATH="$(dirname $(realpath "$0"))"
 KERNEL_PATH="${SCRIPT_PATH}/cache/kernel"
-LOG_PATH="${SCRIPT_PATH}/logs"
+kLOG_PATH="${SCRIPT_PATH}/logs"
 PATCHES_PATH="${SCRIPT_PATH}/kernel-patches"
 OUTPUT_PATH="${SCRIPT_PATH}/output"
 DEB_PATH="${SCRIPT_PATH}/debian/wlanpi-kernel"
 
 # Set default values for configurations
 KERNEL_URL="https://github.com/raspberrypi/linux.git"
-KERNEL_BRANCH="rpi-6.12.y"
+KERNEL_BRANCH="rpi-6.7.y"
 KERNEL_ARCH="arm64"
 KERNEL_DEFCONFIG="bcm2711_defconfig"
-WLANPI_DEFCONFIG="wlanpi_v8_defconfig"
+WLANPI_DEFCONFIG="wlanpi_v7l_defconfig"
 KERNEL_FORCE_SYNC="0"
 CLEAN_KERNEL="0"
 SKIP_PATCHES="0"
