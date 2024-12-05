@@ -20,10 +20,10 @@ OUTPUT_PATH="$(pwd)/output"  # Output directory
 CROSS_COMPILE="aarch64-linux-gnu-"
 ARCH="arm64"
 BASE_CONFIG="bcm2711_defconfig"
-CUSTOM_CONFIG="build/wlanpi_v8_defconfig"  # Updated to include directory path
+CUSTOM_CONFIG="build/wlanpi_v8_defconfig"  # Include directory path
 NUM_CORES=$(nproc)
 
-# Define the new kernel image name here
+# Define the new kernel image name
 KERNEL_IMAGE_NAME="wlanpi-kernel8.img"
 
 IMAGE_OUTPUT="${OUTPUT_PATH}/boot/firmware/${KERNEL_IMAGE_NAME}"
@@ -150,6 +150,8 @@ find arch/arm64/boot/dts/overlays/ -name '*.dtbo' -exec cp {} "$DTBO_OUTPUT_DIR"
 # Verify modules installation
 if [ -d "${MODULES_OUTPUT_DIR}/${KERNEL_VERSION}" ]; then
     echo "Modules successfully installed to ${MODULES_OUTPUT_DIR}/${KERNEL_VERSION}"
+    echo "Listing installed modules:"
+    ls -la "${MODULES_OUTPUT_DIR}/${KERNEL_VERSION}"
 else
     echo "ERROR: Modules were not installed correctly."
     exit 1
@@ -184,9 +186,9 @@ Section: kernel
 Priority: optional
 Architecture: arm64
 Maintainer: Jerry Olla <jerryolla@gmail.com>
-Depends: libc6 (>= 2.29)
 Conflicts: wlanpi-kernel
 Replaces: wlanpi-kernel
+Depends: libc6 (>= 2.29)
 Description: Custom Linux kernel for Raspberry Pi CM4/RPI4 with WLAN Pi v8 configuration for Debian Bookworm
  This package contains a custom-built Linux kernel image, Device Tree Blobs (DTBs),
  and kernel modules tailored for the WLAN Pi v8 configuration on Raspberry Pi CM4/RPI4 running Debian Bookworm.
