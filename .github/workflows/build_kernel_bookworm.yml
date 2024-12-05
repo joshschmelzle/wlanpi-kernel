@@ -17,11 +17,13 @@ jobs:
       KERNEL_TARGET_VERSION: bookworm
 
     steps:
+      # Step 1: Checkout the repository
       - name: Checkout Repository
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
+      # Step 2: Restore APT Cache
       - name: Restore APT Cache
         uses: actions/cache@v3
         with:
@@ -30,11 +32,13 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-apt-
 
+      # Step 3: Prepare APT Cache for Caching
       - name: Prepare APT Cache for Caching
         run: |
           mkdir -p cache-apt
           find /var/cache/apt/archives -path /var/cache/apt/archives/partial -prune -o -type f -name '*.deb' -exec cp {} cache-apt/ \;
 
+      # Step 4: Install Dependencies
       - name: Install Dependencies
         run: |
           sudo apt-get update
@@ -42,6 +46,7 @@ jobs:
               bc libelf-dev libudev-dev libpci-dev libiberty-dev autoconf automake libtool \
               libpython3-dev crossbuild-essential-arm64 dpkg-dev gcc-aarch64-linux-gnu
 
+      # Step 5: Cache Kernel Build Directory
       - name: Cache Kernel Build Directory
         uses: actions/cache@v3
         with:
@@ -50,13 +55,16 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-kernel-
 
+      # Step 6: Make the build script executable
       - name: Make Build Script Executable
         run: chmod +x build/build-wlanpi-kernel.sh
 
+      # Step 7: Execute the build script
       - name: Execute Build Script
         id: build-kernel
         run: ./build/build-wlanpi-kernel.sh
 
+      # Step 8: Extract Kernel Version and Date
       - name: Extract Kernel Version and Date
         id: version-info
         run: |
@@ -69,15 +77,16 @@ jobs:
           echo "BUILD_DATE=$BUILD_DATE" >> $GITHUB_ENV
           echo "PACKAGE_NAME=$PACKAGE_NAME" >> $GITHUB_ENV
 
-      - name: Debug Kernel Version
+      # Step 9: Debug Kernel and Package Versions
+      - name: Debug Kernel and Package Versions
         run: |
           echo "Kernel Version: ${{ env.KERNEL_VERSION }}"
           echo "Build Date: ${{ env.BUILD_DATE }}"
           echo "Package Name: ${{ env.PACKAGE_NAME }}"
 
+      # Step 10: Upload Debian Package as Artifact
       - name: Upload Debian Package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4  # Updated to v4 to avoid deprecation warnings
         with:
           name: ${{ env.PACKAGE_NAME }}-deb-bookworm
           path: output/*.deb
-

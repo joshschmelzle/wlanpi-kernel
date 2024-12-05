@@ -31,8 +31,7 @@ DTB_OUTPUT_DIR="${OUTPUT_PATH}/boot/firmware/"
 DTBO_OUTPUT_DIR="${OUTPUT_PATH}/boot/firmware/overlays/"
 MODULES_OUTPUT_DIR="${OUTPUT_PATH}/lib/modules"
 PACKAGE_DIR="$(pwd)/wlanpi-kernel-package"
-PACKAGE_NAME="wlanpi-kernel-${KERNEL_VERSION}"  # Include kernel version in the package name
-PACKAGE_VERSION="${TIMESTAMP}"  # Keep the timestamp in the version string
+# PACKAGE_NAME and PACKAGE_VERSION will be set after retrieving KERNEL_VERSION and BUILD_DATE
 
 # Save the main build directory before changing directories
 BUILD_DIR="$(pwd)"
@@ -73,6 +72,7 @@ fi
 # Change to kernel source directory
 cd "$KERNEL_SRC_DIR"
 
+# Debugging: Print current directory and contents
 echo "Current Directory: $(pwd)"
 echo "Listing Contents:"
 ls -la
@@ -117,14 +117,17 @@ make INSTALL_MOD_PATH="$OUTPUT_PATH" modules_install
 echo "Building Device Tree Blobs (DTBs)..."
 make -j"$NUM_CORES" dtbs
 
-# Retrieve the kernel version
-KERNEL_VERSION=$(make kernelrelease)
-echo "Kernel version: $KERNEL_VERSION"
-
-# Set package name to include kernel version and date
-# Example: 6.12.1-20231004 (YYYYMMDD)
+# Retrieve the kernel version and set the package version
+KERNEL_VERSION=$(make kernelrelease | sed 's/+//')  # Strip '+' for a valid version string
 BUILD_DATE=$(date +%Y%m%d)
-PACKAGE_NAME="wlanpi-kernel-${KERNEL_VERSION}-${BUILD_DATE}"  # Includes kernel version and date
+PACKAGE_NAME="wlanpi-kernel-${KERNEL_VERSION}-${BUILD_DATE}"
+PACKAGE_VERSION="${KERNEL_VERSION}-${BUILD_DATE}"
+
+# Debugging
+echo "Kernel Version: $KERNEL_VERSION"
+echo "Build Date: $BUILD_DATE"
+echo "Package Name: $PACKAGE_NAME"
+echo "Package Version: $PACKAGE_VERSION"
 
 # Verify build outputs
 if [ ! -f "arch/arm64/boot/Image" ]; then
@@ -173,7 +176,7 @@ cp "$DTBO_OUTPUT_DIR"*.dtbo "$PACKAGE_DIR/usr/local/lib/wlanpi-kernel/boot/firmw
 # Copy modules to package directory
 cp -r "$MODULES_OUTPUT_DIR/$KERNEL_VERSION" "$PACKAGE_DIR/usr/local/lib/wlanpi-kernel/lib/modules/"
 
-# Create DEBIAN/control file with updated Maintainer Information and without firmware-linux dependency
+# Create DEBIAN/control file
 cat <<EOF > "$PACKAGE_DIR/DEBIAN/control"
 Package: $PACKAGE_NAME
 Version: $PACKAGE_VERSION
@@ -240,11 +243,11 @@ EOF
 # Make postinst script executable
 chmod 755 "$PACKAGE_DIR/DEBIAN/postinst"
 
-# Create the Debian package inside the output directory with the kernel version and revision
+# Create the Debian package inside the output directory with the kernel version and date
 echo "Building Debian package..."
-dpkg-deb --build "$PACKAGE_DIR" "$OUTPUT_PATH/$PACKAGE_NAME"_"$PACKAGE_VERSION"_arm64.deb
+dpkg-deb --build "$PACKAGE_DIR" "$OUTPUT_PATH/${PACKAGE_NAME}_arm64.deb"
 
-echo "Debian package $PACKAGE_NAME_$PACKAGE_VERSION_arm64.deb created successfully in $OUTPUT_PATH."
+echo "Debian package ${PACKAGE_NAME}_arm64.deb created successfully in $OUTPUT_PATH."
 
 # Clean up temporary package directory
 echo "Cleaning up temporary package directory..."
