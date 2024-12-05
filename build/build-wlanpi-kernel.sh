@@ -20,7 +20,7 @@ OUTPUT_PATH="$(pwd)/output"  # Output directory
 CROSS_COMPILE="aarch64-linux-gnu-"
 ARCH="arm64"
 BASE_CONFIG="bcm2711_defconfig"
-CUSTOM_CONFIG="wlanpi_v8_defconfig"  # Updated configuration filename
+CUSTOM_CONFIG="build/wlanpi_v8_defconfig"  # Updated to include directory path
 NUM_CORES=$(nproc)
 
 # Define the new kernel image name here
@@ -71,6 +71,10 @@ fi
 
 # Change to kernel source directory
 cd "$KERNEL_SRC_DIR"
+
+echo "Current Directory: $(pwd)"
+echo "Listing Contents:"
+ls -la
 
 # Set up cross-compilation environment
 export ARCH="$ARCH"
