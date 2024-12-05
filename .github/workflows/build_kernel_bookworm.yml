@@ -35,7 +35,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential git libncurses-dev flex bison libssl-dev \
               bc libelf-dev libudev-dev libpci-dev libiberty-dev autoconf automake libtool \
-              libpython3-dev crossbuild-essential-arm64 dpkg-dev aarch64-linux-gnu-gcc
+              libpython3-dev crossbuild-essential-arm64 dpkg-dev gcc-aarch64-linux-gnu
 
       - name: Cache Kernel Build Directory
         uses: actions/cache@v3
