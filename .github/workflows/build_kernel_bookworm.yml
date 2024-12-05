@@ -22,14 +22,18 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Cache APT packages
+      - name: Restore APT Cache
         uses: actions/cache@v3
         with:
-          path: /var/cache/apt/archives
+          path: cache-apt
           key: ${{ runner.os }}-apt-${{ hashFiles('**/build/build-wlanpi-kernel.sh') }}
           restore-keys: |
             ${{ runner.os }}-apt-
-          tar-options: --exclude=partial --exclude=lock
+
+      - name: Prepare APT Cache for Caching
+        run: |
+          mkdir -p cache-apt
+          find /var/cache/apt/archives -type f -name '*.deb' -exec cp {} cache-apt/ \;
 
       - name: Install Dependencies
         run: |
@@ -63,4 +67,3 @@ jobs:
         with:
           name: wlanpi-kernel-${{ env.KERNEL_VERSION }}-deb-bookworm
           path: output/*.deb
-
