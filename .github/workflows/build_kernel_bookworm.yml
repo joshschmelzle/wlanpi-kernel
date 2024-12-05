@@ -33,7 +33,7 @@ jobs:
       - name: Prepare APT Cache for Caching
         run: |
           mkdir -p cache-apt
-          find /var/cache/apt/archives -type f -name '*.deb' -exec cp {} cache-apt/ \;
+          find /var/cache/apt/archives -path /var/cache/apt/archives/partial -prune -o -type f -name '*.deb' -exec cp {} cache-apt/ \;
 
       - name: Install Dependencies
         run: |
@@ -67,3 +67,4 @@ jobs:
         with:
           name: wlanpi-kernel-${{ env.KERNEL_VERSION }}-deb-bookworm
           path: output/*.deb
+
