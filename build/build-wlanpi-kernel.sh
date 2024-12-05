@@ -118,7 +118,7 @@ echo "Building Device Tree Blobs (DTBs)..."
 make -j"$NUM_CORES" dtbs
 
 # Retrieve the kernel version and set the package version
-KERNEL_VERSION=$(make kernelrelease | sed 's/+//')  # Strip '+' for a valid version string
+KERNEL_VERSION=$(make kernelrelease)  # Do NOT strip '+' to match modules_install directory
 BUILD_DATE=$(date +%Y%m%d)
 PACKAGE_NAME="wlanpi-kernel-${KERNEL_VERSION}-${BUILD_DATE}"
 PACKAGE_VERSION="${KERNEL_VERSION}-${BUILD_DATE}"
