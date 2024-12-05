@@ -118,9 +118,9 @@ echo "Building Device Tree Blobs (DTBs)..."
 make -j"$NUM_CORES" dtbs
 
 # Retrieve the kernel version and set the package version
-KERNEL_VERSION=$(make kernelrelease)  # Do NOT strip '+' to match modules_install directory
+KERNEL_VERSION=$(make kernelrelease)  # Preserve '+' to match modules_install directory
 BUILD_DATE=$(date +%Y%m%d)
-PACKAGE_NAME="wlanpi-kernel-${KERNEL_VERSION}-${BUILD_DATE}"
+PACKAGE_NAME="wlanpi-kernel-bookworm"  # Consistent package name
 PACKAGE_VERSION="${KERNEL_VERSION}-${BUILD_DATE}"
 
 # Debugging
@@ -185,6 +185,8 @@ Priority: optional
 Architecture: arm64
 Maintainer: Jerry Olla <jerryolla@gmail.com>
 Depends: libc6 (>= 2.29)
+Conflicts: wlanpi-kernel
+Replaces: wlanpi-kernel
 Description: Custom Linux kernel for Raspberry Pi CM4/RPI4 with WLAN Pi v8 configuration for Debian Bookworm
  This package contains a custom-built Linux kernel image, Device Tree Blobs (DTBs),
  and kernel modules tailored for the WLAN Pi v8 configuration on Raspberry Pi CM4/RPI4 running Debian Bookworm.
@@ -245,9 +247,9 @@ chmod 755 "$PACKAGE_DIR/DEBIAN/postinst"
 
 # Create the Debian package inside the output directory with the kernel version and date
 echo "Building Debian package..."
-dpkg-deb --build "$PACKAGE_DIR" "$OUTPUT_PATH/${PACKAGE_NAME}_arm64.deb"
+dpkg-deb --build "$PACKAGE_DIR" "$OUTPUT_PATH/${PACKAGE_NAME}_${PACKAGE_VERSION}_arm64.deb"
 
-echo "Debian package ${PACKAGE_NAME}_arm64.deb created successfully in $OUTPUT_PATH."
+echo "Debian package ${PACKAGE_NAME}_${PACKAGE_VERSION}_arm64.deb created successfully in $OUTPUT_PATH."
 
 # Clean up temporary package directory
 echo "Cleaning up temporary package directory..."

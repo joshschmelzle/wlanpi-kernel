@@ -69,13 +69,21 @@ jobs:
         id: version-info
         run: |
           DEB_FILE=$(ls output/*.deb | head -n 1)
+          DEB_COUNT=$(ls output/*.deb | wc -l)
+          if [ "$DEB_COUNT" -ne 1 ]; then
+              echo "ERROR: Expected exactly one .deb file, found $DEB_COUNT."
+              exit 1
+          fi
           echo "Extracting kernel version from $DEB_FILE..."
-          KERNEL_VERSION=$(basename "$DEB_FILE" | grep -Po 'wlanpi-kernel-\K[^-]+')
-          BUILD_DATE=$(date +%Y%m%d)
-          PACKAGE_NAME="wlanpi-kernel-${KERNEL_VERSION}-${BUILD_DATE}"
+          # Extract the version from the .deb filename
+          KERNEL_VERSION=$(echo "$(basename "$DEB_FILE")" | grep -Po 'wlanpi-kernel-bookworm_\K[^_]+')
+          BUILD_DATE=$(echo "$(basename "$DEB_FILE")" | grep -Po 'wlanpi-kernel-bookworm_[^_]+_\K[^_]+')
+          PACKAGE_NAME="wlanpi-kernel-bookworm"
+          PACKAGE_VERSION=$(echo "$(basename "$DEB_FILE")" | grep -Po 'wlanpi-kernel-bookworm_\K[^_]+')
           echo "KERNEL_VERSION=$KERNEL_VERSION" >> $GITHUB_ENV
           echo "BUILD_DATE=$BUILD_DATE" >> $GITHUB_ENV
           echo "PACKAGE_NAME=$PACKAGE_NAME" >> $GITHUB_ENV
+          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_ENV
 
       # Step 9: Debug Kernel and Package Versions
       - name: Debug Kernel and Package Versions
@@ -83,6 +91,7 @@ jobs:
           echo "Kernel Version: ${{ env.KERNEL_VERSION }}"
           echo "Build Date: ${{ env.BUILD_DATE }}"
           echo "Package Name: ${{ env.PACKAGE_NAME }}"
+          echo "Package Version: ${{ env.PACKAGE_VERSION }}"
 
       # Step 10: Upload Debian Package as Artifact
       - name: Upload Debian Package
