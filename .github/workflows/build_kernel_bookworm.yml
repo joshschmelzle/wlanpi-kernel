@@ -25,10 +25,11 @@ jobs:
       - name: Cache APT packages
         uses: actions/cache@v3
         with:
-          path: /var/cache/apt/archives  # Cache only the writable APT archive directory
+          path: /var/cache/apt/archives
           key: ${{ runner.os }}-apt-${{ hashFiles('**/build/build-wlanpi-kernel.sh') }}
           restore-keys: |
             ${{ runner.os }}-apt-
+          tar-options: --exclude=partial --exclude=lock
 
       - name: Install Dependencies
         run: |
