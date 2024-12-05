@@ -57,14 +57,27 @@ jobs:
         id: build-kernel
         run: ./build/build-wlanpi-kernel.sh
 
-      - name: Extract Kernel Version
-        id: kernel-version
+      - name: Extract Kernel Version and Date
+        id: version-info
         run: |
-          echo "KERNEL_VERSION=$(grep -Po 'wlanpi-kernel-\K[^\s]+' output/*.deb)" >> $GITHUB_ENV
+          DEB_FILE=$(ls output/*.deb | head -n 1)
+          echo "Extracting kernel version from $DEB_FILE..."
+          KERNEL_VERSION=$(basename "$DEB_FILE" | grep -Po 'wlanpi-kernel-\K[^-]+')
+          BUILD_DATE=$(date +%Y%m%d)
+          PACKAGE_NAME="wlanpi-kernel-${KERNEL_VERSION}-${BUILD_DATE}"
+          echo "KERNEL_VERSION=$KERNEL_VERSION" >> $GITHUB_ENV
+          echo "BUILD_DATE=$BUILD_DATE" >> $GITHUB_ENV
+          echo "PACKAGE_NAME=$PACKAGE_NAME" >> $GITHUB_ENV
+
+      - name: Debug Kernel Version
+        run: |
+          echo "Kernel Version: ${{ env.KERNEL_VERSION }}"
+          echo "Build Date: ${{ env.BUILD_DATE }}"
+          echo "Package Name: ${{ env.PACKAGE_NAME }}"
 
       - name: Upload Debian Package
         uses: actions/upload-artifact@v4
         with:
-          name: wlanpi-kernel-${{ env.KERNEL_VERSION }}-deb-bookworm
+          name: ${{ env.PACKAGE_NAME }}-deb-bookworm
           path: output/*.deb
 

@@ -121,11 +121,10 @@ make -j"$NUM_CORES" dtbs
 KERNEL_VERSION=$(make kernelrelease)
 echo "Kernel version: $KERNEL_VERSION"
 
-# Set PACKAGE_VERSION dynamically based on KERNEL_VERSION and current date/time
-# Example: 6.12.1-20231004.150000 (YYYYMMDD.HHMMSS)
-TIMESTAMP=$(date +%Y%m%d.%H%M%S)
-PACKAGE_VERSION="${KERNEL_VERSION}-${TIMESTAMP}"
-echo "Package version set to: $PACKAGE_VERSION"
+# Set package name to include kernel version and date
+# Example: 6.12.1-20231004 (YYYYMMDD)
+BUILD_DATE=$(date +%Y%m%d)
+PACKAGE_NAME="wlanpi-kernel-${KERNEL_VERSION}-${BUILD_DATE}"  # Includes kernel version and date
 
 # Verify build outputs
 if [ ! -f "arch/arm64/boot/Image" ]; then
