@@ -5,21 +5,8 @@ name: Build WLAN Pi Kernel for Debian Bookworm
 on:
   push:
     branches:
-      - add-build-action  # Trigger build on pushes to 'add-build-action' branch
-  workflow_dispatch:
-    inputs:
-      branch:
-        description: 'Select the branch to build from'
-        required: true
-        default: 'add-build-action'
-        type: choice
-        options:
-          - add-build-action
-          - main
-          - develop
-          - feature-branch-1
-          - feature-branch-2
-          # Add more branches as needed
+      - 6.12-bookworm  # Updated to trigger on '6.12-bookworm' branch
+  workflow_dispatch:    # Enables manual triggering without inputs
 
 jobs:
   build:
@@ -32,11 +19,12 @@ jobs:
       KERNEL_TARGET_VERSION: bookworm
 
     steps:
-      # Step 1: Checkout the repository with the selected branch
+      # Step 1: Checkout the repository
       - name: Checkout Repository
         uses: actions/checkout@v3
         with:
-          ref: ${{ github.event.inputs.branch }}
+          # By default, actions/checkout checks out the branch where the workflow is triggered
+          fetch-depth: 0  # Optional: Fetch all history for all branches and tags
 
       # Step 2: Install Dependencies for Bookworm
       - name: Install Dependencies
@@ -58,5 +46,5 @@ jobs:
       - name: Upload Debian Package
         uses: actions/upload-artifact@v3
         with:
-          name: wlanpi-kernel-deb-${{ env.DISTRO }}-${{ github.event.inputs.branch }}
+          name: wlanpi-kernel-deb-bookworm
           path: output/*.deb
