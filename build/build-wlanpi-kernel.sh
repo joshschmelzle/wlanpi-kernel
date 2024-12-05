@@ -31,7 +31,8 @@ DTB_OUTPUT_DIR="${OUTPUT_PATH}/boot/firmware/"
 DTBO_OUTPUT_DIR="${OUTPUT_PATH}/boot/firmware/overlays/"
 MODULES_OUTPUT_DIR="${OUTPUT_PATH}/lib/modules"
 PACKAGE_DIR="$(pwd)/wlanpi-kernel-package"
-PACKAGE_NAME="wlanpi-kernel"
+PACKAGE_NAME="wlanpi-kernel-${KERNEL_VERSION}"  # Include kernel version in the package name
+PACKAGE_VERSION="${TIMESTAMP}"  # Keep the timestamp in the version string
 
 # Save the main build directory before changing directories
 BUILD_DIR="$(pwd)"

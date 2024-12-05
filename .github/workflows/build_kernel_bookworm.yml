@@ -1,16 +1,14 @@
 name: Build WLAN Pi Kernel for Debian Bookworm
 
-# Description: This workflow builds the WLAN Pi custom Linux kernel and packages it into a Debian package tailored for Debian Bookworm.
-
 on:
   push:
     branches:
-      - 6.12-bookworm  # Updated to trigger on '6.12-bookworm' branch
-  workflow_dispatch:    # Enables manual triggering without inputs
+      - 6.12-bookworm
+  workflow_dispatch:
 
 jobs:
   build:
-    runs-on: ubuntu-latest  # Use the latest Ubuntu runner
+    runs-on: ubuntu-24.04
 
     env:
       DISTRO: bookworm
@@ -19,32 +17,49 @@ jobs:
       KERNEL_TARGET_VERSION: bookworm
 
     steps:
-      # Step 1: Checkout the repository
       - name: Checkout Repository
         uses: actions/checkout@v3
         with:
-          # By default, actions/checkout checks out the branch where the workflow is triggered
-          fetch-depth: 0  # Optional: Fetch all history for all branches and tags
+          fetch-depth: 0
 
-      # Step 2: Install Dependencies for Bookworm
+      - name: Cache APT packages
+        uses: actions/cache@v3
+        with:
+          path: /var/cache/apt
+          key: ${{ runner.os }}-apt-${{ hashFiles('**/build/build-wlanpi-kernel.sh') }}
+          restore-keys: |
+            ${{ runner.os }}-apt-
+
       - name: Install Dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential git libncurses-dev flex bison libssl-dev \
               bc libelf-dev libudev-dev libpci-dev libiberty-dev autoconf automake libtool \
-              libpython3-dev crossbuild-essential-arm64 dpkg-dev
+              libpython3-dev crossbuild-essential-arm64 dpkg-dev aarch64-linux-gnu-gcc
 
-      # Step 3: Make the build script executable
+      - name: Cache Kernel Build Directory
+        uses: actions/cache@v3
+        with:
+          path: linux
+          key: ${{ runner.os }}-kernel-${{ hashFiles('**/build/build-wlanpi-kernel.sh') }}
+          restore-keys: |
+            ${{ runner.os }}-kernel-
+
       - name: Make Build Script Executable
         run: chmod +x build/build-wlanpi-kernel.sh
 
-      # Step 4: Execute the build script for Bookworm
       - name: Execute Build Script
+        id: build-kernel
         run: ./build/build-wlanpi-kernel.sh
 
-      # Step 5: Upload the built Debian package as an artifact
+      - name: Extract Kernel Version
+        id: kernel-version
+        run: |
+          echo "VERSION=$(grep -Po 'wlanpi-kernel-\K[^\s]+' output/*.deb)" >> $GITHUB_ENV
+          echo "::set-output name=version::$(grep -Po 'wlanpi-kernel-\K[^\s]+' output/*.deb)"
+
       - name: Upload Debian Package
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: wlanpi-kernel-deb-bookworm
+          name: wlanpi-kernel-${{ steps.kernel-version.outputs.version }}-deb-bookworm
           path: output/*.deb
