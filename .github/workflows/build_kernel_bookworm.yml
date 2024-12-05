@@ -25,7 +25,7 @@ jobs:
       - name: Cache APT packages
         uses: actions/cache@v3
         with:
-          path: /var/cache/apt
+          path: /var/cache/apt/archives  # Cache only the writable APT archive directory
           key: ${{ runner.os }}-apt-${{ hashFiles('**/build/build-wlanpi-kernel.sh') }}
           restore-keys: |
             ${{ runner.os }}-apt-
@@ -55,11 +55,11 @@ jobs:
       - name: Extract Kernel Version
         id: kernel-version
         run: |
-          echo "VERSION=$(grep -Po 'wlanpi-kernel-\K[^\s]+' output/*.deb)" >> $GITHUB_ENV
-          echo "::set-output name=version::$(grep -Po 'wlanpi-kernel-\K[^\s]+' output/*.deb)"
+          echo "KERNEL_VERSION=$(grep -Po 'wlanpi-kernel-\K[^\s]+' output/*.deb)" >> $GITHUB_ENV
 
       - name: Upload Debian Package
         uses: actions/upload-artifact@v4
         with:
-          name: wlanpi-kernel-${{ steps.kernel-version.outputs.version }}-deb-bookworm
+          name: wlanpi-kernel-${{ env.KERNEL_VERSION }}-deb-bookworm
           path: output/*.deb
+
