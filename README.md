@@ -1,46 +1,24 @@
-# Build WLAN Pi kernel
+# WLAN Pi Kernel
 
-Sync and build the Kernel for WLAN Pi.
+This repository contains build scripts and configurations for the **WLAN Pi** custom Linux kernel.
 
-Currently the script downloads the kernel source from Raspberry Pi Linux Github page and does a
-checkout to specified branch.
+### **Automated Builds with GitHub Actions**
 
-Then it applies the patches from `kernel-patches` folder to this kernel, updates the default
-defconfig with `wlanpi_defconfig`, builds the kernel and them packages it on .deb.
+The repository is set up with a GitHub Actions workflow that automatically builds the Debian package whenever changes are pushed to the `add-build-action` branch.
 
-Usage:
-```bash
-./build-kernel.sh
-```
+#### **Workflow Details:**
 
-To configure the architecture for the cross compilation, use flag `--arch` with the corresponding
-arch desired (either `arm` or `arm64`). Default option is `arm` (32 bits).
-```bash
-./build-kernel.sh --arch arm64
-```
+- **Branch:** `add-build-action`
+- **Trigger:** Push events to the `add-build-action` branch
+- **Workflow Name:** Build WLANPI Kernel for Debian Bookworm
+- **Artifacts:** The built `.deb` package is uploaded as an artifact named `wlanpi-kernel-deb-bookworm`
 
-To clean the kernel for a new compilation from scratch, use the flag `--clean`.
-```bash
-./build-kernel.sh --clean
-```
+### **Manual Build Instructions**
 
-Kernel will only be cloned the first time. If you want to sync again (git fetch) and force the
-update to latest commit on branch, use the flag `--force-sync`.
-```bash
-./build-kernel.sh --force-sync
-```
+If you prefer to build the package manually, follow these steps:
 
-The force update might fail depending on the changes made on the kernel repository. In that case,
-just use both clean and force update variables together.
+1. **Clone the Repository:**
+   ```bash
+   git clone https://github.com/WLAN-Pi/wlanpi-kernel.git
+   cd wlanpi-kernel
 
-To set a different kernel version, use the `--branch` option, which is the branch on kernel
-repository (e.g. `rpi-5.13.y`, `rpi-5.15.y`, `rpi-5.16.y`). Default option is `rpi-5.15.y`.
-```bash
-./build-kernel.sh --branch rpi-5.16.y
-```
-
-To set the number of cores to be used on compilation, use `-j` flag followed by the number of cores.
-The default value is half the cores in the system. If used as `-jX` it will use all cores.
-```bash
-./build-kernel.sh -jX
-```
