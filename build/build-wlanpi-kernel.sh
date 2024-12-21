@@ -20,7 +20,7 @@ OUTPUT_PATH="$(pwd)/output"  # Output directory
 CROSS_COMPILE="aarch64-linux-gnu-"
 ARCH="arm64"
 BASE_CONFIG="bcm2711_defconfig"
-CUSTOM_CONFIG="build/wlanpi_v8_defconfig"  # Include directory path
+CUSTOM_CONFIG="wlanpi_v8_defconfig"  # Include directory path
 NUM_CORES=$(nproc)
 
 # Define the new kernel image name

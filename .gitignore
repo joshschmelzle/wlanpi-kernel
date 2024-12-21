@@ -3,3 +3,5 @@ cache
 logs
 output
 *swp
+build/build_kernel.log
+build/linux/
