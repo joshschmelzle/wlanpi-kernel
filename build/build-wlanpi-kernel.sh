@@ -20,7 +20,7 @@ OUTPUT_PATH="$(pwd)/output"  # Output directory
 CROSS_COMPILE="aarch64-linux-gnu-"
 ARCH="arm64"
 BASE_CONFIG="bcm2711_defconfig"
-CUSTOM_CONFIG="wlanpi_v8_defconfig"  # Include directory path
+CUSTOM_CONFIG="wlanpi_v8_defconfig"  # Corrected path
 NUM_CORES=$(nproc)
 
 # Define the new kernel image name
@@ -167,18 +167,20 @@ fi
 
 mkdir -p "$PACKAGE_DIR/DEBIAN"
 mkdir -p "$PACKAGE_DIR/usr/local/lib/wlanpi-kernel/boot/firmware/overlays"
-mkdir -p "$PACKAGE_DIR/usr/local/lib/wlanpi-kernel/lib/modules/"
-mkdir -p "$PACKAGE_DIR/lib/modules/"
+mkdir -p "$PACKAGE_DIR/lib/modules/$KERNEL_VERSION"
 
 # Copy kernel image and DTBs to package directory
+echo "Copying kernel image and DTBs to package directory..."
 cp "$IMAGE_OUTPUT" "$PACKAGE_DIR/usr/local/lib/wlanpi-kernel/boot/firmware/"
 cp "$DTB_OUTPUT_DIR"*.dtb "$PACKAGE_DIR/usr/local/lib/wlanpi-kernel/boot/firmware/"
 cp "$DTBO_OUTPUT_DIR"*.dtbo "$PACKAGE_DIR/usr/local/lib/wlanpi-kernel/boot/firmware/overlays/"
 
-# Copy modules to package directory
-cp -r "$MODULES_OUTPUT_DIR/$KERNEL_VERSION" "$PACKAGE_DIR/usr/local/lib/wlanpi-kernel/lib/modules/"
+# Copy modules to the correct directory within the package
+echo "Copying modules to $PACKAGE_DIR/lib/modules/$KERNEL_VERSION..."
+cp -r "$MODULES_OUTPUT_DIR/$KERNEL_VERSION"/* "$PACKAGE_DIR/lib/modules/$KERNEL_VERSION/"
 
 # Create DEBIAN/control file
+echo "Creating DEBIAN/control file..."
 cat <<EOF > "$PACKAGE_DIR/DEBIAN/control"
 Package: $PACKAGE_NAME
 Version: $PACKAGE_VERSION
@@ -195,6 +197,7 @@ Description: Custom Linux kernel for Raspberry Pi CM4/RPI4 with WLAN Pi v8 confi
 EOF
 
 # Create DEBIAN/postinst script
+echo "Creating DEBIAN/postinst script..."
 cat <<'EOF' > "$PACKAGE_DIR/DEBIAN/postinst"
 #!/bin/bash
 set -e
@@ -207,10 +210,16 @@ KERNEL_IMAGE="wlanpi-kernel8.img"  # Updated kernel image name
 
 echo "Post-installation: Installing kernel image and DTBs to $FIRMWARE_DIR..."
 
-# Ensure the firmware directory exists
+# Ensure the firmware directory exists; create it if it doesn't
 if [ ! -d "$FIRMWARE_DIR" ]; then
-    echo "ERROR: Firmware directory $FIRMWARE_DIR does not exist."
-    exit 1
+    echo "Firmware directory $FIRMWARE_DIR does not exist. Creating it..."
+    mkdir -p "$FIRMWARE_DIR"
+fi
+
+# Ensure the overlays directory exists; create it if it doesn't
+if [ ! -d "$FIRMWARE_DIR/overlays" ]; then
+    echo "Overlays directory $FIRMWARE_DIR/overlays does not exist. Creating it..."
+    mkdir -p "$FIRMWARE_DIR/overlays"
 fi
 
 # Overwrite existing kernel image without backup
@@ -222,13 +231,17 @@ echo "Copying DTBs..."
 cp -f "$PACKAGE_KERNEL_DIR/"*.dtb "$FIRMWARE_DIR/"
 cp -f "$PACKAGE_KERNEL_DIR/overlays/"*.dtbo "$FIRMWARE_DIR/overlays/"
 
+# Run depmod to generate module dependencies
+echo "Running depmod -a to update module dependencies..."
+depmod -a
+
 # Ensure config.txt contains the kernel parameter
 echo "Verifying $CONFIG_TXT for kernel parameter..."
 if grep -q "^kernel=" "$CONFIG_TXT"; then
-    echo "kernel parameter already set in $CONFIG_TXT. Updating to $KERNEL_IMAGE..."
+    echo "Kernel parameter already set in $CONFIG_TXT. Updating to $KERNEL_IMAGE..."
     sed -i "s|^kernel=.*|kernel=$KERNEL_IMAGE|" "$CONFIG_TXT"
 else
-    echo "kernel parameter not found in $CONFIG_TXT. Adding it..."
+    echo "Kernel parameter not found in $CONFIG_TXT. Adding it..."
     echo "kernel=$KERNEL_IMAGE" >> "$CONFIG_TXT"
 fi
 
@@ -245,6 +258,7 @@ exit 0
 EOF
 
 # Make postinst script executable
+echo "Making postinst script executable..."
 chmod 755 "$PACKAGE_DIR/DEBIAN/postinst"
 
 # Create the Debian package inside the output directory with the kernel version and date
@@ -258,4 +272,3 @@ echo "Cleaning up temporary package directory..."
 rm -rf "$PACKAGE_DIR"
 
 echo "Kernel build, module installation, and package creation completed successfully."
-
