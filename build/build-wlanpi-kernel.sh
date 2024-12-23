@@ -12,15 +12,21 @@ LOG_FILE="build_kernel.log"
 exec > >(tee -i "$LOG_FILE")
 exec 2>&1
 
+# Determine the directory where the script resides
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Set the repository root directory (assuming the script is in 'build/' directory)
+REPO_ROOT="$(dirname "$SCRIPT_DIR")"
+
 # Variables
 KERNEL_REPO="https://github.com/raspberrypi/linux.git"
 KERNEL_BRANCH="rpi-6.12.y"
-KERNEL_SRC_DIR="linux"
-OUTPUT_PATH="$(pwd)/output"  # Output directory
+KERNEL_SRC_DIR="$REPO_ROOT/linux"
+OUTPUT_PATH="$REPO_ROOT/output"  # Output directory
 CROSS_COMPILE="aarch64-linux-gnu-"
 ARCH="arm64"
 BASE_CONFIG="bcm2711_defconfig"
-CUSTOM_CONFIG="wlanpi_v8_defconfig"  # Corrected path
+CUSTOM_CONFIG_FILE="wlanpi_v8_defconfig"
+CUSTOM_CONFIG_PATH="$SCRIPT_DIR/$CUSTOM_CONFIG_FILE"
 NUM_CORES=$(nproc)
 
 # Define the new kernel image name
@@ -30,11 +36,8 @@ IMAGE_OUTPUT="${OUTPUT_PATH}/boot/firmware/${KERNEL_IMAGE_NAME}"
 DTB_OUTPUT_DIR="${OUTPUT_PATH}/boot/firmware/"
 DTBO_OUTPUT_DIR="${OUTPUT_PATH}/boot/firmware/overlays/"
 MODULES_OUTPUT_DIR="${OUTPUT_PATH}/lib/modules"
-PACKAGE_DIR="$(pwd)/wlanpi-kernel-package"
+PACKAGE_DIR="$REPO_ROOT/wlanpi-kernel-package"
 # PACKAGE_NAME and PACKAGE_VERSION will be set after retrieving KERNEL_VERSION and BUILD_DATE
-
-# Save the main build directory before changing directories
-BUILD_DIR="$(pwd)"
 
 # Functions
 error_exit() {
@@ -66,7 +69,7 @@ else
     git fetch origin "$KERNEL_BRANCH"
     git checkout "$KERNEL_BRANCH"
     git reset --hard "origin/$KERNEL_BRANCH"
-    cd "$BUILD_DIR"  # Return to main build directory
+    cd "$REPO_ROOT"  # Return to repository root directory
 fi
 
 # Change to kernel source directory
@@ -90,14 +93,14 @@ echo "Loading base config: $BASE_CONFIG..."
 make "$BASE_CONFIG"
 
 # Merge custom config
-echo "Merging custom config: $CUSTOM_CONFIG..."
-if [ -f "$BUILD_DIR/$CUSTOM_CONFIG" ]; then
+echo "Merging custom config: $CUSTOM_CONFIG_PATH..."
+if [ -f "$CUSTOM_CONFIG_PATH" ]; then
     # Use merge_config.sh to merge the custom config fragment with the base config
-    ./scripts/kconfig/merge_config.sh -m .config "$BUILD_DIR/$CUSTOM_CONFIG" .config
+    ./scripts/kconfig/merge_config.sh -m .config "$CUSTOM_CONFIG_PATH" .config
     # Apply the merged configuration
     make olddefconfig
 else
-    echo "ERROR: Custom config file $CUSTOM_CONFIG not found in $BUILD_DIR."
+    echo "ERROR: Custom config file $CUSTOM_CONFIG_PATH not found."
     exit 1
 fi
 
@@ -273,3 +276,4 @@ echo "Cleaning up temporary package directory..."
 rm -rf "$PACKAGE_DIR"
 
 echo "Kernel build, module installation, and package creation completed successfully."
+

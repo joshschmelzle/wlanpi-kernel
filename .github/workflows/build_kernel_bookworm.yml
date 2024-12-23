@@ -55,16 +55,27 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-kernel-
 
-      # Step 6: Make the build script executable
+      # Step 6: Verify Custom Config File Presence
+      - name: Verify Custom Config File Presence
+        run: |
+          echo "Verifying presence of wlanpi_v8_defconfig in build/ directory..."
+          if [ -f build/wlanpi_v8_defconfig ]; then
+            echo "wlanpi_v8_defconfig found."
+          else
+            echo "ERROR: wlanpi_v8_defconfig not found in build/ directory."
+            exit 1
+          fi
+
+      # Step 7: Make the build script executable
       - name: Make Build Script Executable
         run: chmod +x build/build-wlanpi-kernel.sh
 
-      # Step 7: Execute the build script
+      # Step 8: Execute the build script
       - name: Execute Build Script
         id: build-kernel
         run: ./build/build-wlanpi-kernel.sh
 
-      # Step 8: Extract Kernel Version and Date
+      # Step 9: Extract Kernel Version and Date
       - name: Extract Kernel Version and Date
         id: version-info
         run: |
@@ -86,7 +97,7 @@ jobs:
           echo "PACKAGE_NAME=wlanpi-kernel-bookworm" >> $GITHUB_ENV
           echo "PACKAGE_VERSION=${VERSION}" >> $GITHUB_ENV
 
-      # Step 9: Debug Kernel and Package Versions
+      # Step 10: Debug Kernel and Package Versions
       - name: Debug Kernel and Package Versions
         run: |
           echo "Kernel Version: ${{ env.KERNEL_VERSION }}"
@@ -94,10 +105,11 @@ jobs:
           echo "Package Name: ${{ env.PACKAGE_NAME }}"
           echo "Package Version: ${{ env.PACKAGE_VERSION }}"
 
-      # Step 10: Upload Debian Package as Artifact
+      # Step 11: Upload Debian Package as Artifact
       - name: Upload Debian Package
         uses: actions/upload-artifact@v4  # Updated to v4 to avoid deprecation warnings
         with:
           name: ${{ env.PACKAGE_NAME }}-${{ env.KERNEL_VERSION }}
           path: output/*.deb
+
 
