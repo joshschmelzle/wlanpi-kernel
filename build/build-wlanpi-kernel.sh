@@ -179,7 +179,7 @@ cp "$DTBO_OUTPUT_DIR"*.dtbo "$PACKAGE_DIR/usr/local/lib/wlanpi-kernel/boot/firmw
 echo "Copying modules to $PACKAGE_DIR/lib/modules/$KERNEL_VERSION..."
 cp -r "$MODULES_OUTPUT_DIR/$KERNEL_VERSION"/* "$PACKAGE_DIR/lib/modules/$KERNEL_VERSION/"
 
-# Create DEBIAN/control file
+# Create DEBIAN/control file with kmod dependency
 echo "Creating DEBIAN/control file..."
 cat <<EOF > "$PACKAGE_DIR/DEBIAN/control"
 Package: $PACKAGE_NAME
@@ -190,59 +190,60 @@ Architecture: arm64
 Maintainer: Jerry Olla <jerryolla@gmail.com>
 Conflicts: wlanpi-kernel
 Replaces: wlanpi-kernel
-Depends: libc6 (>= 2.29)
+Depends: libc6 (>= 2.29), kmod
 Description: Custom Linux kernel for Raspberry Pi CM4/RPI4 with WLAN Pi v8 configuration for Debian Bookworm
  This package contains a custom-built Linux kernel image, Device Tree Blobs (DTBs),
  and kernel modules tailored for the WLAN Pi v8 configuration on Raspberry Pi CM4/RPI4 running Debian Bookworm.
 EOF
 
-# Create DEBIAN/postinst script
+# Create DEBIAN/postinst script with embedded KERNEL_VERSION
 echo "Creating DEBIAN/postinst script..."
-cat <<'EOF' > "$PACKAGE_DIR/DEBIAN/postinst"
+cat <<EOF > "$PACKAGE_DIR/DEBIAN/postinst"
 #!/bin/bash
 set -e
 
 # Variables
 FIRMWARE_DIR="/boot/firmware"
 PACKAGE_KERNEL_DIR="/usr/local/lib/wlanpi-kernel/boot/firmware"
-CONFIG_TXT="$FIRMWARE_DIR/config.txt"
+CONFIG_TXT="\$FIRMWARE_DIR/config.txt"
 KERNEL_IMAGE="wlanpi-kernel8.img"  # Updated kernel image name
+KERNEL_VERSION="$KERNEL_VERSION"    # Embedded kernel version
 
-echo "Post-installation: Installing kernel image and DTBs to $FIRMWARE_DIR..."
+echo "Post-installation: Installing kernel image and DTBs to \$FIRMWARE_DIR..."
 
 # Ensure the firmware directory exists; create it if it doesn't
-if [ ! -d "$FIRMWARE_DIR" ]; then
-    echo "Firmware directory $FIRMWARE_DIR does not exist. Creating it..."
-    mkdir -p "$FIRMWARE_DIR"
+if [ ! -d "\$FIRMWARE_DIR" ]; then
+    echo "Firmware directory \$FIRMWARE_DIR does not exist. Creating it..."
+    mkdir -p "\$FIRMWARE_DIR"
 fi
 
 # Ensure the overlays directory exists; create it if it doesn't
-if [ ! -d "$FIRMWARE_DIR/overlays" ]; then
-    echo "Overlays directory $FIRMWARE_DIR/overlays does not exist. Creating it..."
-    mkdir -p "$FIRMWARE_DIR/overlays"
+if [ ! -d "\$FIRMWARE_DIR/overlays" ]; then
+    echo "Overlays directory \$FIRMWARE_DIR/overlays does not exist. Creating it..."
+    mkdir -p "\$FIRMWARE_DIR/overlays"
 fi
 
 # Overwrite existing kernel image without backup
 echo "Copying kernel image..."
-cp -f "$PACKAGE_KERNEL_DIR/$KERNEL_IMAGE" "$FIRMWARE_DIR/"
+cp -f "\$PACKAGE_KERNEL_DIR/\$KERNEL_IMAGE" "\$FIRMWARE_DIR/"
 
 # Copy DTBs
 echo "Copying DTBs..."
-cp -f "$PACKAGE_KERNEL_DIR/"*.dtb "$FIRMWARE_DIR/"
-cp -f "$PACKAGE_KERNEL_DIR/overlays/"*.dtbo "$FIRMWARE_DIR/overlays/"
+cp -f "\$PACKAGE_KERNEL_DIR/"*.dtb "\$FIRMWARE_DIR/"
+cp -f "\$PACKAGE_KERNEL_DIR/overlays/"*.dtbo "\$FIRMWARE_DIR/overlays/"
 
-# Run depmod to generate module dependencies
-echo "Running depmod -a to update module dependencies..."
-depmod -a
+# Run depmod for the new kernel version
+echo "Running depmod for kernel version \$KERNEL_VERSION..."
+depmod "\$KERNEL_VERSION"
 
 # Ensure config.txt contains the kernel parameter
-echo "Verifying $CONFIG_TXT for kernel parameter..."
-if grep -q "^kernel=" "$CONFIG_TXT"; then
-    echo "Kernel parameter already set in $CONFIG_TXT. Updating to $KERNEL_IMAGE..."
-    sed -i "s|^kernel=.*|kernel=$KERNEL_IMAGE|" "$CONFIG_TXT"
+echo "Verifying \$CONFIG_TXT for kernel parameter..."
+if grep -q "^kernel=" "\$CONFIG_TXT"; then
+    echo "Kernel parameter already set in \$CONFIG_TXT. Updating to \$KERNEL_IMAGE..."
+    sed -i "s|^kernel=.*|kernel=\$KERNEL_IMAGE|" "\$CONFIG_TXT"
 else
-    echo "Kernel parameter not found in $CONFIG_TXT. Adding it..."
-    echo "kernel=$KERNEL_IMAGE" >> "$CONFIG_TXT"
+    echo "Kernel parameter not found in \$CONFIG_TXT. Adding it..."
+    echo "kernel=\$KERNEL_IMAGE" >> "\$CONFIG_TXT"
 fi
 
 echo "Kernel image and DTBs installed successfully."
@@ -252,7 +253,7 @@ echo "Kernel image and DTBs installed successfully."
 # sudo rpi-eeprom-update -d -a
 
 # Optionally, prompt for a reboot
-# read -p "Reboot now to apply the new kernel? [y/N] " confirm && [[ $confirm == [yY] ]] && reboot
+# read -p "Reboot now to apply the new kernel? [y/N] " confirm && [[ \$confirm == [yY] ]] && reboot
 
 exit 0
 EOF
