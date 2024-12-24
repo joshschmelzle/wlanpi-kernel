@@ -28,7 +28,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: cache-apt
-          key: ${{ runner.os }}-apt-${{ hashFiles('**/build/build-wlanpi-kernel.sh') }}
+          key: ${{ runner.os }}-apt-${{ hashFiles('**/build-kernel.sh') }}
           restore-keys: |
             ${{ runner.os }}-apt-
 
@@ -51,29 +51,29 @@ jobs:
         uses: actions/cache@v3
         with:
           path: linux
-          key: ${{ runner.os }}-kernel-${{ hashFiles('**/build/build-wlanpi-kernel.sh') }}
+          key: ${{ runner.os }}-kernel-${{ hashFiles('**/build-kernel.sh') }}
           restore-keys: |
             ${{ runner.os }}-kernel-
 
       # Step 6: Verify Custom Config File Presence
       - name: Verify Custom Config File Presence
         run: |
-          echo "Verifying presence of wlanpi_v8_defconfig in build/ directory..."
-          if [ -f build/wlanpi_v8_defconfig ]; then
+          echo "Verifying presence of wlanpi_v8_defconfig in root directory..."
+          if [ -f wlanpi_v8_defconfig ]; then
             echo "wlanpi_v8_defconfig found."
           else
-            echo "ERROR: wlanpi_v8_defconfig not found in build/ directory."
+            echo "ERROR: wlanpi_v8_defconfig not found in root directory."
             exit 1
           fi
 
       # Step 7: Make the build script executable
       - name: Make Build Script Executable
-        run: chmod +x build/build-wlanpi-kernel.sh
+        run: chmod +x build-kernel.sh
 
       # Step 8: Execute the build script
       - name: Execute Build Script
         id: build-kernel
-        run: ./build/build-wlanpi-kernel.sh
+        run: ./build-kernel.sh
 
       # Step 9: Extract Kernel Version and Date
       - name: Extract Kernel Version and Date
@@ -111,5 +111,4 @@ jobs:
         with:
           name: ${{ env.PACKAGE_NAME }}-${{ env.KERNEL_VERSION }}
           path: output/*.deb
-
 
