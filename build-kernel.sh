@@ -178,6 +178,12 @@ if [ ! -d "$FIRMWARE_DIR" ]; then
     exit 1
 fi
 
+# Ensure the overlays directory exists; create it if it doesn't
+if [ ! -d "$FIRMWARE_DIR/overlays" ]; then
+    echo "Overlays directory $FIRMWARE_DIR/overlays does not exist. Creating it..."
+    mkdir -p "$FIRMWARE_DIR/overlays"
+fi
+
 # Copy kernel image
 echo "Copying kernel image..."
 cp -f "$PACKAGE_KERNEL_DIR/$KERNEL_IMAGE" "$FIRMWARE_DIR/"
