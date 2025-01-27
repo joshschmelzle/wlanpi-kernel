@@ -33,9 +33,11 @@ IMAGE_OUTPUT="$OUTPUT_PATH/boot/firmware/$KERNEL_IMAGE_NAME"
 DTB_OUTPUT_DIR="$OUTPUT_PATH/boot/firmware/"
 DTBO_OUTPUT_DIR="$OUTPUT_PATH/boot/firmware/overlays/"
 MODULES_OUTPUT_DIR="$OUTPUT_PATH/lib/modules"
+HEADERS_OUTPUT_DIR="$OUTPUT_PATH/linux-headers"
 
 # Debian Package Metadata
 PACKAGE_NAME="wlanpi-kernel-bookworm"
+HEADERS_PACKAGE_NAME="wlanpi-kernel-headers-bookworm"
 
 # Trap for error handling
 trap 'echo "Error encountered at line $LINENO. Exiting."; exit 1' ERR
@@ -45,7 +47,8 @@ echo "Creating output directories..."
 mkdir -p "$(dirname "$IMAGE_OUTPUT")" \
          "$DTB_OUTPUT_DIR" \
          "$DTBO_OUTPUT_DIR" \
-         "$MODULES_OUTPUT_DIR"
+         "$MODULES_OUTPUT_DIR" \
+         "$HEADERS_OUTPUT_DIR"
 
 # Clone or update the kernel source repository
 if [ ! -d "$KERNEL_SRC_DIR" ]; then
@@ -117,6 +120,29 @@ cp arch/arm64/boot/Image "$IMAGE_OUTPUT"
 
 find arch/arm64/boot/dts/ -name '*.dtb' -exec cp {} "$DTB_OUTPUT_DIR" \;
 find arch/arm64/boot/dts/overlays/ -name '*.dtbo' -exec cp {} "$DTBO_OUTPUT_DIR" \;
+
+prepare_kernel_headers() {
+    echo "Preparing kernel headers..."
+    
+    mkdir -p "$HEADERS_OUTPUT_DIR/usr/src/linux-headers-$KERNEL_VERSION"
+    mkdir -p "$HEADERS_OUTPUT_DIR/lib/modules/$KERNEL_VERSION/build"
+
+    echo "Copying kernel headers..."
+    make ARCH="$ARCH" CROSS_COMPILE="$CROSS_COMPILE" \
+        INSTALL_HDR_PATH="$HEADERS_OUTPUT_DIR/usr" \
+        headers_install
+
+    echo "Copying kernel source for headers..."
+    cp -a "include" "$HEADERS_OUTPUT_DIR/usr/src/linux-headers-$KERNEL_VERSION/"
+    cp -a "arch/$ARCH/include" "$HEADERS_OUTPUT_DIR/usr/src/linux-headers-$KERNEL_VERSION/arch/"
+    
+    cp Makefile "$HEADERS_OUTPUT_DIR/usr/src/linux-headers-$KERNEL_VERSION/"
+    cp .config "$HEADERS_OUTPUT_DIR/usr/src/linux-headers-$KERNEL_VERSION/"
+    cp -a scripts "$HEADERS_OUTPUT_DIR/usr/src/linux-headers-$KERNEL_VERSION/"
+
+    ln -sf "/usr/src/linux-headers-$KERNEL_VERSION" \
+        "$HEADERS_OUTPUT_DIR/lib/modules/$KERNEL_VERSION/build"
+}
 
 # Prepare Debian package
 echo "Preparing Debian package..."
@@ -203,23 +229,75 @@ fi
 
 echo "Kernel image and DTBs installed successfully."
 
-# Optionally, prompt for a reboot
-# read -p "Reboot now to apply the new kernel? [y/N] " confirm && [[ $confirm == [yY] ]] && reboot
-
 exit 0
 EOF
 
 # Make postinst script executable
 chmod 755 "$PACKAGE_DIR/DEBIAN/postinst"
 
+prepare_kernel_headers
+
+# Create headers package directory
+HEADERS_PACKAGE_DIR="$BASE_DIR/wlanpi-kernel-headers-package"
+rm -rf "$HEADERS_PACKAGE_DIR"
+mkdir -p "$HEADERS_PACKAGE_DIR/DEBIAN" \
+         "$HEADERS_PACKAGE_DIR/usr/src/linux-headers-$KERNEL_VERSION" \
+         "$HEADERS_PACKAGE_DIR/lib/modules/$KERNEL_VERSION"
+
+# Copy headers to package directory
+cp -r "$HEADERS_OUTPUT_DIR/usr/src/linux-headers-$KERNEL_VERSION"/* \
+    "$HEADERS_PACKAGE_DIR/usr/src/linux-headers-$KERNEL_VERSION/"
+cp -r "$HEADERS_OUTPUT_DIR/lib/modules/$KERNEL_VERSION/build" \
+    "$HEADERS_PACKAGE_DIR/lib/modules/$KERNEL_VERSION/"
+
+# Create DEBIAN/control file for headers package
+cat <<EOF > "$HEADERS_PACKAGE_DIR/DEBIAN/control"
+Package: $HEADERS_PACKAGE_NAME
+Version: $PACKAGE_VERSION
+Section: kernel
+Priority: optional
+Architecture: arm64
+Maintainer: Jerry Olla <jerryolla@gmail.com>
+Depends: $PACKAGE_NAME (= $PACKAGE_VERSION), gcc, make, perl
+Description: Linux kernel headers for WLAN Pi Raspberry Pi kernel
+ Kernel header files and scripts for WLAN Pi custom kernel development.
+EOF
+
+# Create DEBIAN/postinst script for headers
+cat <<'EOF' > "$HEADERS_PACKAGE_DIR/DEBIAN/postinst"
+#!/bin/bash
+set -e
+
+KERNEL_VERSION="$2"
+
+# Update module build symlink
+if [ -d "/usr/src/linux-headers-$KERNEL_VERSION" ]; then
+    rm -f "/lib/modules/$KERNEL_VERSION/build"
+    ln -sf "/usr/src/linux-headers-$KERNEL_VERSION" "/lib/modules/$KERNEL_VERSION/build"
+fi
+
+exit 0
+EOF
+
+# Make postinst script executable
+chmod 755 "$HEADERS_PACKAGE_DIR/DEBIAN/postinst"
+
 # Build the Debian package
 echo "Building Debian package..."
 dpkg-deb --build "$PACKAGE_DIR" "$OUTPUT_PATH/${PACKAGE_NAME}_${PACKAGE_VERSION}_arm64.deb"
 
-echo "Debian package ${PACKAGE_NAME}_${PACKAGE_VERSION}_arm64.deb created successfully in $OUTPUT_PATH."
+# Build the headers Debian package
+echo "Building Kernel Headers Debian package..."
+dpkg-deb --build "$HEADERS_PACKAGE_DIR" \
+    "$OUTPUT_PATH/${HEADERS_PACKAGE_NAME}_${PACKAGE_VERSION}_arm64.deb"
 
-# Clean up temporary package directory
-echo "Cleaning up temporary package directory..."
+echo "Debian packages created successfully in $OUTPUT_PATH:"
+echo "- ${PACKAGE_NAME}_${PACKAGE_VERSION}_arm64.deb"
+echo "- ${HEADERS_PACKAGE_NAME}_${PACKAGE_VERSION}_arm64.deb"
+
+# Clean up temporary package directories
+echo "Cleaning up temporary package directories..."
 rm -rf "$PACKAGE_DIR"
+rm -rf "$HEADERS_PACKAGE_DIR"
 
 echo "Kernel build, module installation, and package creation completed successfully."
