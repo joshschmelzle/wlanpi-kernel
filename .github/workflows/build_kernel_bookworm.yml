@@ -80,22 +80,34 @@ jobs:
         id: version-info
         run: |
           DEB_FILE=$(ls output/*.deb | head -n 1)
-          DEB_COUNT=$(ls output/*.deb | wc -l)
-          if [ "$DEB_COUNT" -ne 1 ]; then
-              echo "ERROR: Expected exactly one .deb file, found $DEB_COUNT."
+          DEB_COUNT=${#DEB_FILES[@]}
+          if [ "$DEB_COUNT" -ne 0 ]; then
+              echo "ERROR: No .deb files found in output directory."
               exit 1
           fi
+          KERNEL_VERSIONS=()
+          BUILD_DATES=()
+          PACKAGE_VERSIONS=()
+
+          for DEB_FILE in "${DEB_FILES[@]}"; do
+              echo "Extracting kernel version and build date from $DEB_FILE..."
+              FILENAME=$(basename "$DEB_FILE" .deb)
+              VERSION=$(echo "$FILENAME" | grep -Po 'wlanpi-kernel-bookworm_\K[^_]+')
+              BUILD_DATE=$(echo "$VERSION" | grep -Po '[0-9]{8}$')
+              KERNEL_VERSION="${VERSION%-${BUILD_DATE}}"
+              KERNEL_VERSIONS+=("$KERNEL_VERSION")
+              BUILD_DATES+=("$BUILD_DATE")
+              PACKAGE_VERSIONS+=("$VERSION")
+          done
+
           echo "Extracting kernel version and build date from $DEB_FILE..."
           # Extract the version and build date from the .deb filename
           # Expected filename format: wlanpi-kernel-bookworm_<version>_arm64.deb
-          FILENAME=$(basename "$DEB_FILE" .deb)
-          VERSION=$(echo "$FILENAME" | grep -Po 'wlanpi-kernel-bookworm_\K[^_]+')
-          BUILD_DATE=$(echo "$VERSION" | grep -Po '[0-9]{8}$')
-          KERNEL_VERSION="${VERSION%-${BUILD_DATE}}"
-          echo "KERNEL_VERSION=${KERNEL_VERSION}" >> $GITHUB_ENV
-          echo "BUILD_DATE=${BUILD_DATE}" >> $GITHUB_ENV
+          
+          echo "KERNEL_VERSION=${KERNEL_VERSIONS[0]}" >> $GITHUB_ENV
+          echo "BUILD_DATE=${BUILD_DATES[0]}" >> $GITHUB_ENV
           echo "PACKAGE_NAME=wlanpi-kernel-bookworm" >> $GITHUB_ENV
-          echo "PACKAGE_VERSION=${VERSION}" >> $GITHUB_ENV
+          echo "PACKAGE_VERSION=${PACKAGE_VERSIONS[0]}" >> $GITHUB_ENV
 
       # Step 10: Debug Kernel and Package Versions
       - name: Debug Kernel and Package Versions
