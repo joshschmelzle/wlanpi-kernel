@@ -79,35 +79,61 @@ jobs:
       - name: Extract Kernel Version and Date
         id: version-info
         run: |
-          DEB_FILE=$(ls output/*.deb | head -n 1)
-          DEB_COUNT=${#DEB_FILES[@]}
-          if [ "$DEB_COUNT" -ne 0 ]; then
-              echo "ERROR: No .deb files found in output directory."
-              exit 1
-          fi
-          KERNEL_VERSIONS=()
-          BUILD_DATES=()
-          PACKAGE_VERSIONS=()
-
-          for DEB_FILE in "${DEB_FILES[@]}"; do
-              echo "Extracting kernel version and build date from $DEB_FILE..."
-              FILENAME=$(basename "$DEB_FILE" .deb)
-              VERSION=$(echo "$FILENAME" | grep -Po 'wlanpi-kernel-bookworm_\K[^_]+')
-              BUILD_DATE=$(echo "$VERSION" | grep -Po '[0-9]{8}$')
-              KERNEL_VERSION="${VERSION%-${BUILD_DATE}}"
-              KERNEL_VERSIONS+=("$KERNEL_VERSION")
-              BUILD_DATES+=("$BUILD_DATE")
-              PACKAGE_VERSIONS+=("$VERSION")
-          done
-
-          echo "Extracting kernel version and build date from $DEB_FILE..."
-          # Extract the version and build date from the .deb filename
-          # Expected filename format: wlanpi-kernel-bookworm_<version>_arm64.deb
-          
-          echo "KERNEL_VERSION=${KERNEL_VERSIONS[0]}" >> $GITHUB_ENV
-          echo "BUILD_DATE=${BUILD_DATES[0]}" >> $GITHUB_ENV
+          echo "KERNEL_VERSION=unknown" >> $GITHUB_ENV
+          echo "BUILD_DATE=unknown" >> $GITHUB_ENV
           echo "PACKAGE_NAME=wlanpi-kernel-bookworm" >> $GITHUB_ENV
-          echo "PACKAGE_VERSION=${PACKAGE_VERSIONS[0]}" >> $GITHUB_ENV
+          echo "PACKAGE_VERSION=unknown" >> $GITHUB_ENV
+
+          echo "Files in output directory:"
+          ls -la output/
+
+          DEB_FILES=$(find output -name '*.deb' -type f)
+          if [ -z "$DEB_FILES" ]; then
+              echo "ERROR: No .deb files found in output directory."
+          fi
+
+          KERNEL_DEB=$(ls output/wlanpi-kernel-bookworm_*.deb 2>/dev/null | head -n 1)
+          if [ -z "$KERNEL_DEB" ]; then
+              echo "ERROR: Kernel .deb file not found"
+          fi
+
+          echo Processing kernel deb: $KERNEL_DEB
+          FILENAME=$(basename "$KERNEL_DEB")
+          echo "Processing filename: $FILENAME"
+
+          VERSION=$(echo "$FILENAME" | sed -nE 's/^[^_]+_([^_]+)_.+$/\1/p')
+          if [ -z "$VERSION" ]; then
+              echo "ERROR: Could not extract version from filename"
+              exit 0
+          fi
+
+          echo "Extracted version: $VERSION"
+          BUILD_DATE=$(echo "$VERSION" | grep -o '[0-9]\{8\}$' || echo "")
+          if [ -z "$BUILD_DATE" ]; then
+              echo "ERROR: Could not extract build date from version"
+              echo "KERNEL_VERSION=$VERSION" >> $GITHUB_ENV
+              echo "PACKAGE_VERSION=$VERSION" >> $GITHUB_ENV
+              exit 0
+          fi
+          
+          KERNEL_VERSION=${VERSION%-$BUILD_DATE}
+          if [ -z "$KERNEL_VERSION" ]; then
+              echo "ERROR: Could not extract kernel version"
+              echo "KERNEL_VERSION=$VERSION" >> $GITHUB_ENV
+              echo "BUILD_DATE=$BUILD_DATE" >> $GITHUB_ENV
+              echo "PACKAGE_VERSION=$VERSION" >> $GITHUB_ENV
+              exit 0
+          fi
+
+          echo "KERNEL_VERSION=$KERNEL_VERSION" >> $GITHUB_ENV
+          echo "BUILD_DATE=$BUILD_DATE" >> $GITHUB_ENV
+          echo "PACKAGE_NAME=wlanpi-kernel-bookworm" >> $GITHUB_ENV
+          echo "PACKAGE_VERSION=$VERSION" >> $GITHUB_ENV
+          
+          echo "Extracted values:"
+          echo "KERNEL_VERSION=$KERNEL_VERSION"
+          echo "BUILD_DATE=$BUILD_DATE"
+          echo "PACKAGE_VERSION=$VERSION"
 
       # Step 10: Debug Kernel and Package Versions
       - name: Debug Kernel and Package Versions
@@ -119,8 +145,8 @@ jobs:
 
       # Step 11: Upload Debian Package as Artifact
       - name: Upload Debian Package
-        uses: actions/upload-artifact@v4  # Updated to v4 to avoid deprecation warnings
+        uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.PACKAGE_NAME }}-${{ env.KERNEL_VERSION }}
+          name: ${{ env.PACKAGE_NAME }}-${{ env.KERNEL_VERSION }}-${{ env.BUILD_DATE }}
           path: output/*.deb
 
